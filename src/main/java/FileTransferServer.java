@@ -1,6 +1,7 @@
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.Console;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -20,7 +21,7 @@ public class FileTransferServer {
     private static StringBuilder sb = new StringBuilder();
     private static String fileName;
     private static String ServerFile = "/home/ellentuane/NetBeansProjects/tranferirArquivo/serverArquivos/";
-    private static String password = "@Otario123";
+    private static String password = "@RedesII";
 
     public static void main(String[] args) {
         File file = new File(ServerFile);
@@ -47,10 +48,8 @@ public class FileTransferServer {
                     while (!passwordIn.equals(password)){
                         // send msg and print directly on command line
                         dout.writeUTF("Enter your password");
-                        
                         // Waits for the password
                         passwordIn = din.readUTF();
-                        
                         // check if password is correct
                         if (passwordIn.equals(password)){
                             dout.writeUTF("true");
@@ -61,26 +60,25 @@ public class FileTransferServer {
                     
                     // password was corret
                     dout.writeUTF("Welcome, " + clientName);
-
+                    
+                    // Sends list of the files currently avaiable in the server directory
                     file = new File(ServerFile);
                     files = file.listFiles();
                     int j = 0;
                     sb.append("Total Files in folder - " + files.length + "\n");
-
                     FileTransferServer.listFiles(files);
-
                     dout.writeUTF(sb.toString());
-
+                    
+                    // asks for file name
                     dout.writeUTF("Enter the FileName which you want to Download\n");
-
                     fileName = din.readUTF();	//asks client to input fileName to download
-
                     file = new File(ServerFile + fileName);
-
-                    FileTransferServer.sendFile(file, fileName);//the file if present, is sent over the network
-
+                    
+                    // send file to client
+                    FileTransferServer.sendFile(file, fileName);
                     file = new File(ServerFile);
-
+                    
+                    //closes socket
                     serverSocket.close();
 		}
 		catch(IOException ex) {
@@ -90,61 +88,66 @@ public class FileTransferServer {
 	
 
 	private static void sendFile(File file, String fileName) {
-		try {
-                    dout.writeUTF(fileName);
+            // send file to client method
+            try {
+                dout.writeUTF(fileName);
+                //creating byteArray with length same as file length
+                byte[] byteArray = new byte[(int) file.length()];
+                dout.writeInt(byteArray.length);
 
-                    byte[] byteArray = new byte[(int) file.length()];					//creating byteArray with length same as file length
-                    dout.writeInt(byteArray.length);
+                BufferedInputStream bis = new BufferedInputStream (new FileInputStream(file));
+                //Writing int 0 as a Flag which denotes the file is present in the Server directory
+                // if file was absent, FileNotFound exception will be thrown and int 1 will be written
+                dout.writeInt(0);								
 
-                    BufferedInputStream bis = new BufferedInputStream (new FileInputStream(file));
-                    //Writing int 0 as a Flag which denotes the file is present in the Server directory, if file was absent, FileNotFound exception will be thrown and int 1 will be written
-                    dout.writeInt(0);								
+                BufferedOutputStream bos = new BufferedOutputStream(dout);
+                
+                //reads bytes of byteArray length from the BufferedInputStream into byteArray
+                int count;
+                while((count = bis.read(byteArray)) != -1) {	
+                    //writes bytes from byteArray into the BufferedOutputStream 
+                    //(0 is the offset and count is the length)
+                    bos.write(byteArray, 0, count);					
+                }
 
-                    BufferedOutputStream bos = new BufferedOutputStream(dout);
+                bos.flush();
+                bis.close();
+                //readInt is used to reset if any bytes are present in the buffer 
+                //after the file transfer
+                din.readInt();					
+            }
+            catch(FileNotFoundException ex) {
+                sb.append("File " + fileName + " Not Found! \n        Please Check the input and try again.\n\n        ");
 
-                    int count;
-                    while((count = bis.read(byteArray)) != -1) {			//reads bytes of byteArray length from the BufferedInputStream into byteArray
-                            bos.write(byteArray, 0, count);					//writes bytes from byteArray into the BufferedOutputStream (0 is the offset and count is the length)
-                    }
-
-                    bos.flush();
-                    bis.close();
-
-                    din.readInt();					//readInt is used to reset if any bytes are present in the buffer after the file transfer
-		}
-		catch(FileNotFoundException ex) {
-			sb.append("File " + fileName + " Not Found! \n        Please Check the input and try again.\n\n        ");
-			
-			try {
-				//Writing int 1 as a Flag which denotes the file is absent from the Server directory, if file was present int 0 would be written
-				dout.writeInt(1);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		catch(IOException ex) {
-			ex.printStackTrace();
-		}
-		
+                try {
+                    //Writing int 1 as a Flag which denotes the file is absent 
+                    //from the Server directory, if file was present int 0 would be written
+                    dout.writeInt(1);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            catch(IOException ex) {
+                ex.printStackTrace();
+            }
 	}
 	
 	
 	private static void listFiles(File[] files) {
-		int k = 0;
-		
-		sb.append("\n        +---------+----------------------+\n");			
-		Formatter formatter = new Formatter(sb, Locale.US);
-		//formats the fields to create table like structure while displaying on console
-		formatter.format("        | %-7s | %-20s |\n", "Sr No", "Filename");			
-		sb.append("        +---------+----------------------+\n");
-		
-		for(File f: files) {
-			if(! f.isDirectory()) 
-				formatter.format("        | %-7s | %-20s |\n", ++k, f.getName());
-		}
-		
-		sb.append("        +---------+----------------------+\n\n        ");
-		formatter.close();					
-	}
+            int k = 0;
 
+            sb.append("\n        +---------+----------------------+\n");			
+            Formatter formatter = new Formatter(sb, Locale.US);
+            //formats the fields to create table like structure while displaying on console
+            formatter.format("        | %-7s | %-20s |\n", "Sr No", "Filename");			
+            sb.append("        +---------+----------------------+\n");
+
+            for(File f: files) {
+                if(! f.isDirectory()) 
+                    formatter.format("        | %-7s | %-20s |\n", ++k, f.getName());
+            }
+
+            sb.append("        +---------+----------------------+\n\n        ");
+            formatter.close();					
+	}
 }
