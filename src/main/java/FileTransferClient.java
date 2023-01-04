@@ -35,6 +35,7 @@ public class FileTransferClient {
             //Reads text from a character-input stream, buffering characters 
             // efficient reading of characters, arrays, and lines.
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+          
             String str;
             
             // getting user name
@@ -45,7 +46,6 @@ public class FileTransferClient {
             // password authentication 
             Boolean checkpassWord = false;
             while(!checkpassWord){
-                //password
                 str = din.readUTF();
                 System.out.println("\nServer: " + str);
                 String pass = consoleFunc();
@@ -62,8 +62,8 @@ public class FileTransferClient {
             
             // asks for file name
             str = din.readUTF();
-            
             System.out.println("\nServer5: " + str);
+           
             //file name input
             str = br.readLine().trim();				
             dout.writeUTF(str);	
@@ -94,12 +94,15 @@ public class FileTransferClient {
 
             File file = new File(clientFiles + fileName);
 
-            //fileFoundFlag is a Flag which denotes the file is present or absent from the Server directory, is present int 0 is sent, else 1
+            //fileFoundFlag is a Flag which denotes the file is present or absent
+            //from the Server directory, is present int 0 is sent, else 1
             int fileFoundFlag = din.readInt();
             if(fileFoundFlag == 1)
                 return;
-
+            
+            // reads data in blocks 
             BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file));
+            
             //reads bytes of length byteArray from BufferedInputStream 
             //& writes into the byteArray, (Offset 0 and length is of byteArray)
             bytesRead = bis.read(byteArray, 0, byteArray.length);			
